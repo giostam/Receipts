@@ -1,0 +1,467 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:pe="http://primefaces.org/ui/extensions">
+
+    <f:view contentType="text/html" locale="el">
+        <h:head>
+            <f:facet name="first">
+                <meta content='text/html; charset=UTF-8' http-equiv="Content-Type"/>
+                <title>Αποδείξεις</title>
+            </f:facet>
+        </h:head>
+        <script type="text/javascript">
+//            PrimeFaces.widget.Dialog.prototype.applyFocus = function () {
+//                this.jq.find("[id*='nextReceiptBtn']").focus();
+//            };
+
+            function handleLoginRequest(xhr, status, args) {
+                if (!args.loggedIn) {
+                    PF('loginDialog').jq.effect("shake", {times: 3}, 200);
+                }
+                else {
+                    PF('loginDialog').hide();
+                    location.reload();
+                }
+            }
+
+            function replaceDotsWithCommas(input) {
+                var inputVal = $(input).val();
+                var replacedVal = inputVal.split(".").join(",");
+                $(input).val(replacedVal);
+            }
+
+            function resetFocusOnProduct() {
+                $("[id*='productName']").focus();
+            }
+
+            function highlightDays(date) {
+                date.setHours(0, 0, 0, 0);
+                var dates = #{storeView.importDates};
+                var cssclass = '';
+                for (var i = 0; i &lt; dates.length; i++) {
+                    var cmpDate = new Date(dates[i]);
+                    cmpDate.setHours(0, 0, 0, 0);
+
+                    if (+date === +cmpDate) {
+                        cssclass = 'highlightDate';
+                    }
+                }
+                return [true, cssclass];
+            }
+        </script>
+        <style>
+            .highlightDate {
+                background-color: lightgray;
+            }
+            body {
+                font-size: 13px !important;
+            }
+
+            .ui-button-text {
+                font-size:14px;
+            }
+
+            .ui-layout-pane {
+                border: 0;
+            }
+
+            .ui-widget-header {
+                /*background-color: transparent;*/
+            }
+
+            .ui-panelgrid td, .ui-panelgrid tr {
+                border-style: none !important
+            }
+
+            .selectMenu { 
+                display: inline-block; vertical-align: top; 
+            }
+            .calendarFilter .ui-inputfield {
+                width:70px !important;
+                margin: 0 0.2em !important;
+            }
+        </style>
+        <h:body>
+            <p:ajaxStatus onstart="PF('statusDialog').show()" onsuccess="PF('statusDialog').hide()" />
+
+            <p:dialog widgetVar="statusDialog" modal="true" draggable="false" closable="false" resizable="false" showHeader="false">
+                <p:graphicImage value="/images/ajaxloadingbar.gif"/>
+            </p:dialog>
+            <p:layout fullPage="true">
+                <p:layoutUnit style="text-align: center; font-family: Georgia" position="north" size="55">
+                    <span style="font-size: 32px">Αποδείξεις</span>
+                </p:layoutUnit>
+
+                <p:layoutUnit position="center">
+                    <p:confirmDialog global="true">
+                        <p:commandButton value="Ναι" type="button" styleClass="ui-confirmdialog-yes" icon="ui-icon-check" />
+                        <p:commandButton value="Όχι" type="button" styleClass="ui-confirmdialog-no" icon="ui-icon-close" />
+                    </p:confirmDialog>
+                    <p:toolbar>
+                        <f:facet name="left">
+                            <h:panelGroup rendered="#{user.loggedIn}">
+                                <p:commandButton icon="ui-icon-plus" value="Νέα Εισαγωγή" rendered="#{user.canImport}"
+                                                 onclick="PF('newImport').show();"/>
+                                <p:dialog resizable="false" appendTo="@(body)" modal="true" header="Νέα Εισαγωγή" 
+                                          widgetVar="newImport" width="600">
+                                    <h:form>
+                                        <h:panelGrid columns="2" cellpadding="5">
+                                            <p:outputLabel for="importFiles" value="Zip αρχείο" style="font-style: italic"/>
+                                            <p:fileUpload mode="advanced" multiple="false" id="importFiles" cancelLabel="Ακύρωση"
+                                                          uploadLabel="Εισαγωγή" invalidFileMessage="Το αρχείο δεν είναι έγκυρο"
+                                                          allowTypes="/(\.|\/)(zip)$/"
+                                                          dragDropSupport="false" fileLimit="1"
+                                                          fileUploadListener="#{storeView.importStores}"
+                                                          update=":storesDataForm:storesDataTable">
+                                                <f:attribute name="userId" value="#{user.id}" />
+                                            </p:fileUpload>
+                                        </h:panelGrid>
+                                    </h:form>
+                                </p:dialog>
+                                <p:commandButton icon="ui-icon-document" value="Διαχείριση Πίνακα Autocomplete"
+                                                 onclick="PF('autocompleteProducts').show();" rendered="#{user.canImport}"/>
+                                <p:dialog resizable="false" appendTo="@(body)" modal="true" header="Προϊόντα για Autocomplete" 
+                                          widgetVar="autocompleteProducts" height="600" width="700" position="top">
+                                    <h:form id="autocompleteForm">
+                                        <p:growl id="autocompletegrowl" sticky="false" showDetail="true" life="3000" />
+                                        <p:panelGrid columns="3">
+                                            <h:outputLabel for="word" value="Προϊόν *"/>
+                                            <p:inputText required="true" requiredMessage="Προϊόν: Απαιτείται τιμή"
+                                                         id="word" value="#{storeView.autocompleteProduct}"/>
+                                            <p:commandButton value="Προσθήκη" actionListener="#{storeView.insertAutocompleteProduct}"
+                                                             update="autocompleteTable autocompleteForm autocompletegrowl"/>
+                                        </p:panelGrid>
+                                        <p:dataTable var="word" value="#{storeView.autocompleteProducts}"
+                                                     style="width:550px"
+                                                     rows="20"
+                                                     paginator="true"
+                                                     paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     rowsPerPageTemplate="10,20,50"
+                                                     id="autocompleteTable" scrollable="true"
+                                                     widgetVar="wordsTable" emptyMessage="Δεν βρέθηκε τίποτα">
+                                            <p:column headerText="Όνομα Προϊόντος" width="400">
+                                                <h:outputText value="#{word.productName}"/>
+                                            </p:column>
+                                            <p:column style="width:40px;text-align: center">
+                                                <p:commandButton update="autocompleteTable" immediate="true"
+                                                                 icon="ui-icon-circle-minus" title="Delete"
+                                                                 actionListener="#{storeView.deleteAutocompleteProduct}">
+                                                    <f:attribute name="wordId" value="#{word.id}"/>
+                                                    <p:confirm header="Επιβεβαίωση" message="Είσαι σίγουρος;" icon="ui-icon-alert" />
+                                                </p:commandButton>
+                                            </p:column>
+                                        </p:dataTable>
+                                    </h:form>
+                                </p:dialog>
+                            </h:panelGroup>
+                        </f:facet>
+                        <f:facet name="right">
+                            <h:form prependId="false">
+                                <p:commandButton rendered="#{user.loggedIn}" styleClass="smallButton" icon="ui-icon-power" 
+                                                 value="Logout, #{user.firstName eq null ? user.username : user.firstName}" action="#{user.logout}" ajax="false"/>
+                                <p:commandButton rendered="#{not user.loggedIn}" styleClass="smallButton" icon="ui-icon-power" value="Login"
+                                                 onclick="PF('loginDialog').show();"/>
+                            </h:form>
+                            <p:dialog resizable="false" appendTo="@(body)" modal="true" header="Είσοδος" 
+                                      widgetVar="loginDialog">
+                                <h:form prependId="false">
+                                    <p:growl id="logingrowl" sticky="false" showDetail="true" life="3000" />
+                                    <h:panelGrid columns="2" cellpadding="5">
+                                        <p:outputLabel for="username" value="Όνομα Χρήστη" style="font-style: italic"/>
+                                        <p:inputText id="username" value="#{user.username}" required="true" label="Όνομα Χρήστη"/>
+                                        <p:outputLabel for="password" value="Κωδικός Χρήστη" style="font-style: italic"/>
+                                        <p:password id="password" value="#{user.password}" required="true" label="Κωδικός Χρήστη"/>
+
+                                        <f:facet name="footer">
+                                            <p:commandButton value="Είσοδος" update="logingrowl" actionListener="#{user.login}"
+                                                             oncomplete="handleLoginRequest(xhr, status, args)" />
+                                        </f:facet>  
+                                    </h:panelGrid>
+                                </h:form>
+                            </p:dialog>  
+                        </f:facet>
+                    </p:toolbar>
+                    <p:spacer height="20"/>                    
+                    <h:form id="storesDataForm" rendered="#{user.loggedIn}">
+                        <p:dataTable id="storesDataTable" var="store" value="#{storeView.allStores}"
+                                     widgetVar="storesTable" rows="20"
+                                     paginator="true"
+                                     paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     rowsPerPageTemplate="10,20,50"
+                                     filteredValue="#{storeView.filteredStores}" emptyMessage="Δεν βρέθηκε τίποτα"
+                                     style="width: 100%; text-align: center">
+                            <p:column filterBy="#{store.storeId}" filterMatchMode="contains"
+                                      headerText="Κωδικός Καταστήματος">
+                                <h:outputText value="#{store.storeId}" />
+                            </p:column>
+                            <p:column headerText="Ημ/νία Καταστήματος">
+                                <h:outputText value="#{store.storeDate}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Ημ/νία Εισαγωγής">
+                                <f:facet name="header">
+                                    <h:outputText value="Ημ/νία Εισαγωγής"/>
+                                    <div style="display: block;  width: 90%; margin: auto;">
+                                        <p:calendar beforeShowDay="highlightDays" id="filterImportDate" styleClass="calendarFilter" value="#{storeView.filterImportDate}">
+                                            <p:ajax event="dateSelect" listener="#{storeView.filterDataTable}" update="storesDataTable" />
+                                        </p:calendar>
+                                    </div>
+                                </f:facet>
+                                <h:outputText value="#{store.importDate}" >
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column filterBy="#{store.complete}" filterMatchMode="equals" id="completedCol"
+                                      headerText="Ολοκληρωμένο">
+                                <f:facet name="filter">
+                                    <p:selectOneButton onchange="PF('storesTable').filter()" id="completedFilter">
+                                        <f:converter converterId="javax.faces.Boolean" />
+                                        <f:selectItem itemLabel="Όλα" itemValue="" />
+                                        <f:selectItem itemLabel="Ναι" itemValue="true" />
+                                        <f:selectItem itemLabel="Όχι" itemValue="false" />
+                                    </p:selectOneButton>
+                                </f:facet>
+                                <h:outputText value="#{store.complete ? 'Ναι' : 'Όχι'}" />
+                            </p:column>
+                            <p:column id="receiptsRangeCol" headerText="Εύρος Αποδείξεων">
+                                <h:outputText value="#{store.firstReceiptId} - #{store.lastReceiptId}"/>
+                            </p:column>
+                            <p:column id="receiptsCompleteCntCol" headerText="Ολοκληρωμένες Αποδείξεις/Σύνολο">
+                                <h:outputText value="#{store.completedCnt}/#{store.receiptsCnt}"/>
+                            </p:column>
+                            <p:column id="lastCompleteReceiptDate" headerText="Ολοκληρωμένα Προϊόντα">
+                                <h:outputText value="#{store.productsCnt}"/>
+                            </p:column>
+                            <p:column style="width:120px;text-align: center">
+                                <p:commandButton update=":storePanel :navigationPanel :receiptsForm1:receiptsPanel1 :receiptsForm2:receiptsPanel2 :productsForm:productsPanel :productsDataTable" 
+                                                 oncomplete="PF('receiptsDialog').show();" 
+                                                 icon="ui-icon-search" title="View"
+                                                 action="#{storeView.openStoreReceipts(store.id)}"/>
+                                <p:commandButton ajax="false" icon="ui-icon-arrowthick-1-s" 
+                                                 rendered="#{user.canExport}"
+                                                 actionListener="#{storeView.prepExport}">
+                                    <f:attribute name="storeId" value="#{store.id}"/>
+                                    <p:fileDownload value="#{storeView.exportFile}" />
+                                </p:commandButton>
+                                <p:commandButton update=":storesDataForm:storesDataTable" immediate="true"
+                                                 icon="ui-icon-circle-minus" title="Delete" rendered="#{user.canDelete}"
+                                                 actionListener="#{storeView.deleteStore}">
+                                    <f:attribute name="storeId" value="#{store.id}"/>
+                                    <p:confirm header="Επιβεβαίωση" message="Είσαι σίγουρος;" icon="ui-icon-alert" />
+                                </p:commandButton>
+                            </p:column>
+                        </p:dataTable>
+                    </h:form>
+                    <p:dialog resizable="true" appendTo="@(body)" modal="true" header="Αποδείξεις καταστήματος" 
+                              widgetVar="receiptsDialog" width="800" height="600" position="left top">
+                        <p:outputPanel id="storePanel">
+                            <p:panelGrid columns="4">
+                                <h:outputText value="Κωδικός Καταστήματος" style="font-style: italic"/>
+                                <h:outputText value="#{storeView.selectedStore.storeId}"/>
+                                <h:outputText value="Ημ/νια Καταστήματος" style="font-style: italic"/>
+                                <h:outputText value="#{storeView.selectedStore.storeDate}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:panelGrid>
+                        </p:outputPanel>
+                        <p:separator/>
+                        <p:outputPanel id="navigationPanel">
+                            <p:commandButton icon="ui-icon-circle-arrow-w" action="#{storeView.previousReceipt}"
+                                             widgetVar="previousReceipt" id="previousReceiptBtn"
+                                             disabled="#{storeView.selectedReceipt.id eq storeView.selectedStore.firstReceiptId}"
+                                             update="nextReceiptBtn previousReceiptBtn :receiptsForm1:receiptsPanel1 :receiptsForm2:receiptsPanel2 :productsForm:productsPanel :productsDataTable"/>
+                            <p:hotkey bind="left" handler="PF('previousReceipt').jq.click()" /> 
+                            <p:commandButton icon="ui-icon-circle-arrow-e" action="#{storeView.nextReceipt}"
+                                             widgetVar="nextReceipt" id="nextReceiptBtn"
+                                             disabled="#{storeView.selectedReceipt.id eq storeView.selectedStore.lastReceiptId}"
+                                             update="nextReceiptBtn previousReceiptBtn :receiptsForm1:receiptsPanel1 :receiptsForm2:receiptsPanel2 :productsForm:productsPanel :productsDataTable"/>
+                            <p:hotkey bind="right" handler="PF('nextReceipt').jq.click()" /> 
+                        </p:outputPanel>
+                        <h:form id="receiptsForm1">
+                            <p:outputPanel id="receiptsPanel1">
+                                <p:panelGrid columns="2" style="width: 100%;">
+                                    <p:outputPanel>
+                                        <h:outputText value="Μοναδικός Κωδικός" style="font-style: italic"/>
+                                        <p:spacer width="10"/>
+                                        <h:outputText value="#{storeView.selectedReceipt.id}"/>
+                                    </p:outputPanel>
+                                    <p:outputPanel style="vertical-align: middle">    
+                                        <h:outputText value="Μετάβαση Σε" style="font-style: italic"/>
+                                        <p:spacer width="10"/>
+                                        <p:selectOneMenu styleClass="selectMenu" value="#{storeView.goToReceiptType}">
+                                            <f:selectItem id="img" itemValue="img" itemLabel="Εικόνα"/>
+                                            <f:selectItem id="id" itemValue="id" itemLabel="Κωδικός"/>
+                                        </p:selectOneMenu>
+                                        <p:spacer width="10"/>
+                                        <h:inputText style="width: 50px" value="#{storeView.goToReceiptInput}"/>
+                                        <p:spacer width="10"/>
+                                        <p:commandButton widgetVar="go" icon="ui-icon-circle-triangle-e" 
+                                                         action="#{storeView.goToReceipt}"
+                                                         update=":nextReceiptBtn :previousReceiptBtn :receiptsForm1:receiptsPanel1 :receiptsForm2:receiptsPanel2 :productsForm:productsPanel :productsDataTable"/>
+                                    </p:outputPanel>
+                                </p:panelGrid>
+                            </p:outputPanel>
+                        </h:form>
+                        <h:form id="receiptsForm2">
+                            <p:growl id="receiptgrowl" sticky="false" showDetail="true" life="3000" />
+                            <p:outputPanel id="receiptsPanel2">
+                                <p:focus context="receiptsPanel2"/>
+                                <p:panelGrid columns="2" style="width: 100%;">
+                                    <p:outputPanel>
+                                        <h:outputLabel for="receiptTime" value="Ώρα Απόδειξης *" style="font-style: italic"/>
+                                        <p:spacer width="10"/>
+                                        <p:inputMask mask="99:99" id="receiptTime" label="Ώρα Απόδειξης"
+                                                     disabled="#{storeView.selectedReceipt.complete}"
+                                                     requiredMessage="Ώρα: Πρέπει να συμπληρώσετε τιμή"
+                                                     style="width: 50px" maxlength="5" required="true"
+                                                     value="#{storeView.receiptTime}"/>
+                                    </p:outputPanel>
+                                    <p:outputPanel>
+                                        <h:outputText style="#{storeView.selectedReceipt.complete ? 'color: green;' : 'color: red;'}" 
+                                                      value="#{storeView.selectedReceipt.complete ? 'Ολοκληρωμένη' : 'Μη ολοκληρωμένη'}"/>
+                                        <h:outputText rendered="#{not storeView.selectedReceipt.complete}"/>
+                                        <p:spacer width="20"/>
+                                        <p:commandButton rendered="#{storeView.selectedReceipt.complete}" value="Αναίρεση" 
+                                                         update=":storesDataForm:storesDataTable :nextReceiptBtn :previousReceiptBtn receiptgrowl :receiptsForm1:receiptsPanel1 :receiptsForm2:receiptsPanel2 :productsForm:productsPanel :productsDataTable"
+                                                         id="undoSaveBtn" widgetVar="undoSave"
+                                                         action="#{storeView.unsaveReceipt(storeView.selectedReceipt.id)}"/>
+                                    </p:outputPanel>
+                                    <p:outputPanel rendered="#{not storeView.selectedReceipt.complete}">
+                                        <h:outputLabel for="receiptTotalToCompare" value="Συνολικό Ποσό (για έλεγχο)" style="font-style: italic"/>
+                                        <p:spacer width="10"/>
+                                        <p:inputText label="Συνολικό Ποσό" id="receiptTotalToCompare"
+                                                     style="width: 100px" value="#{storeView.receiptTotalToCompare}"
+                                                     onkeyup="replaceDotsWithCommas(this)">
+                                            <f:convertNumber type="number" groupingUsed="#{false}"/>
+                                            <f:validator validatorId="custom.totalReceiptAmountValidator"/>
+                                        </p:inputText>
+                                    </p:outputPanel>
+                                    <p:outputPanel></p:outputPanel>
+                                    <p:outputPanel rendered="#{not storeView.selectedReceipt.complete}">
+                                        <p:commandButton value="Ολοκλήρωση" icon="ui-icon-disk" action="#{storeView.saveAndNextReceipt(storeView.selectedReceipt.id)}"
+                                                         widgetVar="completeAndNext" id="completeAndNextBtn"
+                                                         update=":storesDataForm:storesDataTable :nextReceiptBtn :previousReceiptBtn receiptgrowl :receiptsForm1:receiptsPanel1 :receiptsForm2:receiptsPanel2 :productsForm:productsPanel :productsDataTable"/>
+                                    </p:outputPanel>
+                                    <p:outputPanel>
+                                        <!--
+                                        <p:commandLink onclick="PF('receiptImage').show();" immediate="true" 
+                                                       style="font-size: 12px;" 
+                                                       value="#{storeView.selectedReceipt.imgName}"
+                                                       ajax="true"/>
+                                        -->
+                                        <h:outputText style="font-size: 12px;"  value="#{storeView.selectedReceipt.imgName}"/>
+                                    </p:outputPanel>
+                                </p:panelGrid>
+                            </p:outputPanel>
+                        </h:form>
+                        <p:separator/>
+                        <h:form id="productsForm">
+                            <p:outputPanel id="productsPanel">
+                                <p:growl id="productgrowl" sticky="false" showDetail="true" life="3000" />
+
+                                <p:panelGrid columns="2" rendered="#{not storeView.selectedReceipt.complete}">
+                                    <h:outputLabel value="Περιγραφή *" for="productName" style="font-style: italic"/>
+                                    <p:autoComplete label="Περιγραφή" required="true" id="productName" 
+                                                    value="#{storeView.productDescription}" size="40"
+                                                    requiredMessage="Περιγραφή: Πρέπει να συμπληρώσετε τιμή"
+                                                    completeMethod="#{storeView.completeText}">
+                                        <p:ajax event="query" global="false"/>
+                                    </p:autoComplete>
+                                    <h:outputLabel value="Τιμή *" for="productPrice" style="font-style: italic"/>
+                                    <p:inputText label="Τιμή" id="productPrice" required="true" 
+                                                 style="width: 100px" value="#{storeView.productPrice}"
+                                                 requiredMessage="Τιμή: Πρέπει να συμπληρώσετε τιμή"
+                                                 onkeyup="replaceDotsWithCommas(this)">
+                                        <f:convertNumber type="number" groupingUsed="#{false}"/>
+                                    </p:inputText>
+                                    <h:outputLabel value="Ποσότητα *" for="productQuantity" style="font-style: italic"/>
+                                    <p:inputText label="Ποσότητα" required="true" id="productQuantity" 
+                                                 style="width: 100px" 
+                                                 value="#{storeView.productQuantity}" 
+                                                 requiredMessage="Ποσότητα: Πρέπει να συμπληρώσετε τιμή"
+                                                 onkeyup="replaceDotsWithCommas(this)">
+                                        <f:convertNumber type="number" groupingUsed="#{false}"/>
+                                    </p:inputText>
+                                    <h:outputText/>
+                                    <p:commandButton value="Εισαγωγή" action="#{storeView.insertProduct(user.id, storeView.selectedReceipt.id)}"
+                                                     update=":productsDataTable productsPanel productgrowl"
+                                                     onsuccess="resetFocusOnProduct()"/>
+                                </p:panelGrid>
+                            </p:outputPanel>
+                            <p:spacer height="5"/>
+                        </h:form>
+                        <p:dataTable id="productsDataTable" var="product" value="#{storeView.selectedReceipt.products}" 
+                                     widgetVar="productsTable" emptyMessage="Δεν βρέθηκε τίποτα">
+                            <p:column headerText="Περιγραφή" style="text-align: left;" width="150">
+                                <h:outputText value="#{product.productName}" />
+                            </p:column>
+                            <p:column headerText="Τιμή" style="text-align: right" width="100">
+                                <f:facet name="header">
+                                    <h:outputText style="font-weight: bold;" value="Τιμή (Σύνολο: "/>
+                                    <h:outputText style="font-weight: bold;" value="#{storeView.selectedReceipt.priceTotal}">
+                                        <f:convertNumber type="number" pattern="###0.00" groupingUsed="#{false}"/>
+                                    </h:outputText>
+                                    <h:inputHidden value="#{storeView.selectedReceipt.priceTotal}" id="receiptTotal">
+                                         <f:convertNumber type="number" pattern="###0.00" groupingUsed="#{false}"/>
+                                    </h:inputHidden>
+                                    <h:outputText style="font-weight: bold;" value=")"/>
+                                </f:facet>
+                                <h:outputText value="#{product.productPrice}" >
+                                    <f:convertNumber pattern="###0.00" type="number" groupingUsed="#{false}"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Ποσότητα" style="text-align: right" width="80">
+                                <h:outputText value="#{product.productQuantity}" >
+                                    <f:convertNumber pattern="###0.000" type="number" groupingUsed="#{false}"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column style="width:30px;text-align: center" rendered="#{not storeView.selectedReceipt.complete}">
+                                <p:commandButton update="productsDataTable :productsForm:productsPanel" immediate="true"
+                                                 icon="ui-icon-circle-minus" title="Delete"
+                                                 actionListener="#{storeView.deleteProduct}">
+                                    <f:attribute name="productId" value="#{product.id}"/>
+                                    <p:confirm header="Επιβεβαίωση" message="Είσαι σίγουρος;" icon="ui-icon-alert" />
+                                </p:commandButton>
+                            </p:column>
+                        </p:dataTable>
+                        <!--<p:ajax event="close" onstart="PF('receiptImage').hide()"/>-->
+                    </p:dialog>
+                    <!--
+                    <p:dialog appendTo="@(body)" resizable="false" modal="false"
+                              widgetVar="receiptImage" dynamic="true" height="600" width="500"
+                              position="right top" closable="true">
+                        <p:layout id="receiptImageLayout">
+                            <p:layoutUnit position="north" size="60">
+                                <p:commandButton icon="ui-icon-zoomin" value="Μεγέθυνση +"  
+                                                 widgetVar="imageZoomIn"
+                                                 onclick="PF('resizeWidget').scale(1.10);
+                                                         return false;"/> 
+                                <p:commandButton icon="ui-icon-zoomout" value="Σμίκρυνση -"  
+                                                 widgetVar="imageZoomOut"
+                                                 onclick="PF('resizeWidget').scale(0.10);
+                                                         return false;"/>
+                            </p:layoutUnit>
+                            <p:layoutUnit position="center">
+                                <p:graphicImage value="#{images.image}" id="receiptImg" height="500">
+                                    <f:param name="id" value="#{storeView.selectedReceipt.id}" />
+                                </p:graphicImage>
+                                <pe:imageRotateAndResize id="resize" for="receiptImg" widgetVar="resizeWidget"/>
+                            </p:layoutUnit>
+                        </p:layout>
+                    </p:dialog>
+                    -->
+                </p:layoutUnit>
+
+            </p:layout>
+
+        </h:body>
+
+    </f:view>
+</html>
+
