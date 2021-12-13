@@ -6,6 +6,7 @@
 package com.receipts.datatypes;
 
 import com.receipts.utils.DbUtils;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Connection;
@@ -18,10 +19,10 @@ import javax.faces.context.ExternalContext;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import javax.inject.Named;
+
 import org.primefaces.context.RequestContext;
 
 /**
- *
  * @author StamaterisG
  */
 @Named(value = "user")
@@ -73,7 +74,7 @@ public class User implements Serializable {
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
-    
+
     public boolean isCanImport() {
         return canImport;
     }
@@ -100,12 +101,13 @@ public class User implements Serializable {
 
     public void login(ActionEvent event) {
         RequestContext context = RequestContext.getCurrentInstance();
-        FacesMessage message = null;
         FacesContext facesContext = FacesContext.getCurrentInstance();
 
+        FacesMessage message;
         if (!getUser(username, password)) {
             message = new FacesMessage(FacesMessage.SEVERITY_WARN, "Σφάλμα", "Λανθασμένα στοιχεία εισόδου");
             facesContext.addMessage(null, message);
+            System.out.println("Login failed");
         }
         context.addCallbackParam("loggedIn", loggedIn);
     }
@@ -125,14 +127,16 @@ public class User implements Serializable {
     private boolean getUser(String username, String password) {
         boolean userExists = false;
 
-        String sql = "select id, firstname, surname, can_import, can_export, can_delete from users where username = ? and password = ?";
+        String sql = "select id, firstname, surname, can_import, can_export, can_delete from USERS where username = ? and password = ?";
         try (Connection conn = DbUtils.getDbConnection();
-                PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             ps.setString(2, password);
 
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
+                if (rs.next()) {
+                    System.out.println("User " + username + " found");
+
                     userExists = true;
                     id = rs.getInt("id");
                     firstName = rs.getString("firstname");
@@ -141,6 +145,8 @@ public class User implements Serializable {
                     canExport = rs.getInt("can_export") == 1;
                     canDelete = rs.getInt("can_delete") == 1;
                     loggedIn = true;
+                } else {
+                    System.out.println("User " + username + " not found");
                 }
             }
         } catch (SQLException ex) {

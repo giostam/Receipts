@@ -22,10 +22,10 @@ public class DbUtils {
 
         try {
             InitialContext ctx = new InitialContext();
-            DataSource ds = (DataSource) ctx.lookup("jdbc/receipts");
-
+            DataSource ds = (DataSource) ctx.lookup("java:comp/env/jdbc/receipts");
             conn = ds.getConnection();
         } catch (NamingException | SQLException ex) {
+            System.err.println("Failed to get connection");
             ex.printStackTrace();
         }
 
